@@ -12,6 +12,7 @@ The Terraform blueprints the Lembos sample organisation is built from. Seven mod
 | `kafka-topic` | `platform/kafka-topic` | 1.4.0 | Resource |
 | `object-store-bucket` | `platform/object-store-bucket` | 2.2.0 | Resource |
 | `search-index` | `platform/search-index` | 1.1.0 | Resource |
+| `eks-cluster` | `platform/eks-cluster` | 1.0.0 | Environment |
 
 Module versions are git tags, in the form `{module}/v{version}` — so `postgres-cluster/v3.3.0` is the
 coordinate the seeded BlueprintVersion pins.
@@ -45,6 +46,21 @@ Every resource module returns the same four outputs:
 
 `secret_ref` is the contract that keeps a secret out of Terraform state and out of the Orchestrator. It is
 what a chart's `resourceBindings.<handle>.secretRef` is set from.
+
+## `eks-cluster` is the odd one, and deliberately
+
+It is the only module that produces **somewhere to run** rather than something that runs, so it takes the
+environment contract rather than the resource one — an environment, a stamp, a stage — and emits four extra
+outputs describing the ExecutionTarget it creates.
+
+Its blueprint version carries an `ExecutionTargetTemplate`, which is what makes applying it register a
+target in the catalog that placement can then route to. Nothing else here does that, and until this module
+existed the sample's execution targets were rows somebody typed rather than infrastructure the platform
+made.
+
+`target_capabilities` is echoed from its input rather than derived. A capability is a promise the cluster
+can run that class of work, nothing downstream re-checks it, and a second opinion computed inside the
+module could disagree with the cluster that was actually built.
 
 ## Running against Floci
 
