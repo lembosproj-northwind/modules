@@ -1,0 +1,82 @@
+# The landing zone an environment declares once and every stamp resolving to the same placement shares.
+#
+# An Environment blueprint, so it takes an environment and a stamp rather than a ResourceNeed. Unlike
+# eks-cluster it builds the whole substrate — network, identity, cluster and ingress — which is what an
+# environment needs before anything can be deployed into it.
+
+variable "name" {
+  description = "The Environment's qualified name, e.g. northwind/prod."
+  type        = string
+}
+
+variable "stamp" {
+  description = "The stamp this landing zone serves. Stamps sharing a placement share one of these."
+  type        = string
+  default     = "default"
+}
+
+variable "stage" {
+  description = "Development, Test, Staging or Production. What governance matches on, and what sizing follows."
+  type        = string
+  default     = "Development"
+
+  validation {
+    condition     = contains(["Development", "Test", "Staging", "Production"], var.stage)
+    error_message = "stage must be Development, Test, Staging or Production."
+  }
+}
+
+variable "region" {
+  description = <<-EOT
+    Where it is built. Supplied by the stamp rather than by the account: an account spans regions, and
+    which one a slot occupies is a property of the slot. Two stamps whose region differs resolve different
+    foundation inputs and get a landing zone each — a VPC and a cluster are both regional.
+  EOT
+  type        = string
+  default     = "eu-west-1"
+}
+
+variable "cidr_block" {
+  description = "The VPC's address space. Wide enough for the subnets below to be carved out of it."
+  type        = string
+  default     = "10.42.0.0/16"
+
+  validation {
+    condition     = can(cidrnetmask(var.cidr_block))
+    error_message = "cidr_block must be a valid IPv4 CIDR block."
+  }
+}
+
+variable "availability_zones" {
+  description = <<-EOT
+    How many zones to spread across. Two is the floor, because an EKS control plane will not come up in
+    one and a stamp that cannot survive a zone is not a production stamp.
+  EOT
+  type        = number
+  default     = 2
+
+  validation {
+    condition     = var.availability_zones >= 2 && var.availability_zones <= 4
+    error_message = "availability_zones must be between 2 and 4."
+  }
+}
+
+variable "kubernetes_version" {
+  description = "Pinned by the blueprint rather than chosen per environment, so a fleet stays on one version."
+  type        = string
+  default     = "1.31"
+}
+
+variable "ingress_domain" {
+  description = <<-EOT
+    The zone this environment publishes under, e.g. de.northwind.example. Becomes the hosted zone and the
+    wildcard record pointing at the load balancer, and is what a component's ingress host is built from.
+  EOT
+  type        = string
+  default     = ""
+}
+
+variable "tags" {
+  type    = map(string)
+  default = {}
+}
