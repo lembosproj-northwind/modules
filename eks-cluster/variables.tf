@@ -13,13 +13,19 @@ variable "stamp" {
 }
 
 variable "stage" {
-  description = "Development, Test, Staging or Production. What governance matches on, and what sizing follows."
+  description = <<-EOT
+    dev, test, staging or prod. What governance matches on, and what sizing follows.
+
+    These are EnvironmentStage's own values, not their display names. The platform resolves
+    `context.environment.stage` to the canonical value — `prod`, not `Production` — so a module validating
+    the display names refuses every real run with a message about a vocabulary nobody sent.
+  EOT
   type        = string
-  default     = "Development"
+  default     = "dev"
 
   validation {
-    condition     = contains(["Development", "Test", "Staging", "Production"], var.stage)
-    error_message = "stage must be Development, Test, Staging or Production."
+    condition     = contains(["dev", "test", "staging", "prod"], var.stage)
+    error_message = "stage must be dev, test, staging or prod."
   }
 }
 

@@ -11,20 +11,20 @@ locals {
   # Sized by stage, not by a size class. What a cluster needs is a property of what it hosts, and a stage
   # already says that — a developer never chooses "large" for an environment they do not own.
   sizing = {
-    Development = { instance_type = "t3.medium", desired = 2, min = 1, max = 4 }
-    Test        = { instance_type = "t3.medium", desired = 2, min = 1, max = 4 }
-    Staging     = { instance_type = "m6i.large", desired = 3, min = 2, max = 8 }
-    Production  = { instance_type = "m6i.xlarge", desired = 6, min = 3, max = 24 }
+    dev     = { instance_type = "t3.medium", desired = 2, min = 1, max = 4 }
+    test    = { instance_type = "t3.medium", desired = 2, min = 1, max = 4 }
+    staging = { instance_type = "m6i.large", desired = 3, min = 2, max = 8 }
+    prod    = { instance_type = "m6i.xlarge", desired = 6, min = 3, max = 24 }
   }
   size = local.sizing[var.stage]
 
   # Production keeps its control-plane logs; below it they are noise nobody reads and storage somebody pays
   # for.
-  log_types = var.stage == "Production" ? ["api", "audit", "authenticator"] : []
+  log_types = var.stage == "prod" ? ["api", "audit", "authenticator"] : []
 
   # One NAT per zone in production so a zone failure does not take the others' egress with it; one shared
   # below it, because three idle NAT gateways is a bill without a reader.
-  nat_count = var.stage == "Production" ? var.availability_zones : 1
+  nat_count = var.stage == "prod" ? var.availability_zones : 1
 
   zones = [for index in range(var.availability_zones) : "${var.region}${substr("abcd", index, 1)}"]
 
@@ -258,7 +258,7 @@ resource "aws_eks_cluster" "this" {
     security_group_ids = [aws_security_group.node.id]
 
     # Reachable from outside only below production; production is entered through the platform's own path.
-    endpoint_public_access  = var.stage != "Production"
+    endpoint_public_access  = var.stage != "prod"
     endpoint_private_access = true
   }
 
