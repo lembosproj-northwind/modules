@@ -64,13 +64,19 @@ output "cluster_ca" {
 }
 
 output "oidc_issuer" {
-  description = "What binds a workload identity to this cluster."
-  value       = aws_eks_cluster.this.identity[0].oidc[0].issuer
+  description = <<-EOT
+    What binds a workload identity to this cluster. Null where the cluster publishes no issuer, which is
+    an emulator rather than an account — see `irsa_enabled`.
+  EOT
+  value       = try(aws_eks_cluster.this.identity[0].oidc[0].issuer, null)
 }
 
 output "oidc_provider_arn" {
-  description = "What an IRSA role trusts. Every role scoped to this cluster names it."
-  value       = aws_iam_openid_connect_provider.this.arn
+  description = <<-EOT
+    What an IRSA role trusts. Every role scoped to this cluster names it, and it is null where there is no
+    provider to name — see `irsa_enabled`.
+  EOT
+  value       = try(aws_iam_openid_connect_provider.this[0].arn, null)
 }
 
 output "irsa_role_arns" {

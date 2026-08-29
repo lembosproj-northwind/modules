@@ -31,6 +31,13 @@ locals {
   secret_ref = "${var.name}/${var.stamp}/kubeconfig"
   domain     = var.ingress_domain != "" ? var.ingress_domain : "${var.stamp}.${local.slug}.internal"
 
+  # The two workloads that need to act on this account from inside the cluster, by the service account each
+  # is bound to. Named here rather than inline so the roles and the policy documents cannot drift apart.
+  irsa_service_accounts = {
+    "aws-load-balancer-controller" = "system:serviceaccount:kube-system:aws-load-balancer-controller"
+    "external-dns"                 = "system:serviceaccount:kube-system:external-dns"
+  }
+
   tags = merge(var.tags, {
     "lembos.dev/environment" = var.name
     "lembos.dev/stamp"       = var.stamp
@@ -268,14 +275,23 @@ resource "aws_eks_cluster" "this" {
 # What makes a pod able to assume a role without a static credential. Created here rather than left to a
 # later step, because every IRSA role in this environment trusts it and there is nothing to trust until it
 # exists.
+#
+# Gated on the input rather than on the issuer itself. The issuer is an attribute of the cluster, so on a
+# first plan it is unknown — and a count cannot be derived from an unknown — while on the plan after an
+# emulated apply it is a known empty list, and `identity[0]` then fails the entire plan on an index. Only
+# something answerable before the cluster exists can decide this, which is why it is a variable.
 data "tls_certificate" "oidc" {
+  count = var.irsa_enabled ? 1 : 0
+
   url = aws_eks_cluster.this.identity[0].oidc[0].issuer
 }
 
 resource "aws_iam_openid_connect_provider" "this" {
+  count = var.irsa_enabled ? 1 : 0
+
   url             = aws_eks_cluster.this.identity[0].oidc[0].issuer
   client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = [data.tls_certificate.oidc.certificates[0].sha1_fingerprint]
+  thumbprint_list = [data.tls_certificate.oidc[0].certificates[0].sha1_fingerprint]
   tags            = local.tags
 }
 
@@ -298,22 +314,21 @@ resource "aws_eks_node_group" "this" {
 # The two workloads that need to act on this account from inside the cluster. Scoped to their own service
 # accounts by the subject condition, so a pod in another namespace cannot assume them.
 data "aws_iam_policy_document" "irsa_assume" {
-  for_each = {
-    "aws-load-balancer-controller" = "system:serviceaccount:kube-system:aws-load-balancer-controller"
-    "external-dns"                 = "system:serviceaccount:kube-system:external-dns"
-  }
+  # None of them without the provider to trust: a role whose federated principal does not exist is a role
+  # nothing can assume, and creating it would leave the cluster looking equipped when it is not.
+  for_each = var.irsa_enabled ? local.irsa_service_accounts : {}
 
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]
 
     principals {
       type        = "Federated"
-      identifiers = [aws_iam_openid_connect_provider.this.arn]
+      identifiers = [aws_iam_openid_connect_provider.this[0].arn]
     }
 
     condition {
       test     = "StringEquals"
-      variable = "${replace(aws_iam_openid_connect_provider.this.url, "https://", "")}:sub"
+      variable = "${replace(aws_iam_openid_connect_provider.this[0].url, "https://", "")}:sub"
       values   = [each.value]
     }
   }

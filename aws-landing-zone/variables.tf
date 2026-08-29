@@ -82,6 +82,23 @@ variable "ingress_domain" {
   default     = ""
 }
 
+variable "irsa_enabled" {
+  description = <<-EOT
+    Whether to build the cluster's OIDC provider and the IRSA roles that trust it.
+
+    True everywhere it can be, which is every real account: EKS always publishes an OIDC issuer, and
+    without the provider nothing in the cluster can assume a role without a static credential.
+
+    It exists because an emulator does not publish one. The issuer is read off the cluster after it is
+    created, so a module cannot decide this for itself — on a first plan the attribute is still unknown,
+    which is not something a `count` can be derived from, and on the plan after an emulated apply it is a
+    known empty list that fails the whole plan on an index rather than on anything to do with the run. An
+    input is the only form of this question that can be answered before the cluster exists.
+  EOT
+  type        = bool
+  default     = true
+}
+
 variable "tags" {
   type    = map(string)
   default = {}
