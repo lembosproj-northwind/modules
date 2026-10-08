@@ -5,16 +5,10 @@ The Terraform blueprints the Lembos sample organisation is built from, one per
 
 | Module | Blueprint | Version | Type |
 | --- | --- | --- | --- |
-| `serverless-function` | `platform/serverless-function` | 2.1.0 | Component |
-| `static-site` | `platform/static-site` | 1.5.0 | Component |
 | `postgres-cluster` | `platform/postgres-cluster` | 3.3.0 | Resource |
 | `redis-cache` | `platform/redis-cache` | 2.0.1 | Resource |
-| `kafka-topic` | `platform/kafka-topic` | 1.4.0 | Resource |
-| `object-store-bucket` | `platform/object-store-bucket` | 2.2.0 | Resource |
-| `search-index` | `platform/search-index` | 1.1.0 | Resource |
-| `eks-cluster` | `platform/eks-cluster` | 1.0.0 | Environment |
-| `aws-landing-zone` | `platform/aws-landing-zone` | 1.0.0 | Environment |
-| `kubernetes-namespace` | `platform/kubernetes-namespace` | 1.3.0 | Environment |
+| `aws-landing-zone` | `platform/aws-landing-zone` | 1.0.1 | Environment |
+| `kubernetes-namespace` | the slot level of `platform/aws-landing-zone` | 1.3.0 | Environment |
 
 Module versions are git tags, in the form `{module}/v{version}` — so `postgres-cluster/v3.3.0` is the
 coordinate the seeded BlueprintVersion pins.
@@ -27,21 +21,20 @@ so a module validating `Production` refuses every real run with a message about 
 
 ## The variable contract
 
-Every **resource** module takes the same five inputs, because Lembos passes them without knowing which
-module it is calling. A `ResourceNeed` declares a type and a size class; the EnvironmentProfile maps that
-to one of these modules; the provisioning workflow supplies the rest from the environment and stamp.
+Every **resource** module takes the same five inputs. The blueprint answers each of them from what Lembos
+knows about the run, so a resource's spec has nothing it must supply:
 
-| Variable | From |
+| Variable | Answered by |
 | --- | --- |
-| `name` | the Resource's qualified name, e.g. `ordering/orders-db` |
-| `size_class` | `ResourceNeed.SizeClass` — `small` / `medium` / `large` |
-| `environment` | the Environment's qualified name |
-| `stamp` | the Stamp the instance occupies |
-| `tags` | platform-supplied labels, merged into provider tags |
+| `name` | the Resource's qualified name, e.g. `ordering/orders-db` — `context.resource.qualifiedName` |
+| `size_class` | the tier the destination publishes — `environment.outputs.tier` — which a spec may move |
+| `environment` | the Environment's name — `context.environment.name` |
+| `stamp` | the slot the instance occupies — `context.slot.name` |
+| `tags` | the blueprint, merged into the provider's tags |
 
 **What a size class means is decided per module, in its `locals`.** That is deliberate: `small` for
-Postgres is a different decision from `small` for a search index, and the developer declaring the need
-should not have to know either.
+Postgres is a different decision from `small` for Redis, and the developer declaring the need should not
+have to know either.
 
 Every resource module returns the same four outputs:
 
@@ -55,7 +48,7 @@ Every resource module returns the same four outputs:
 `secret_ref` is the contract that keeps a secret out of Terraform state and out of the Orchestrator. It is
 what a chart's `resourceBindings.<handle>.secretRef` is set from.
 
-## The three Environment modules, and the two levels they sit at
+## The Environment modules, and the two levels they sit at
 
 An Environment module produces **somewhere to run** rather than something that runs, so it takes an
 environment, a stamp and a stage rather than the resource contract above. There are two levels of it, and
@@ -77,10 +70,6 @@ It is also the one module that **configures a provider itself**, against the rul
 its `kubernetes` provider cannot be configured by a root module: what it points at is a cluster that does
 not exist until the foundation has run, and arrives here as an input. The `aws` provider it also uses
 follows the ordinary rule.
-
-`eks-cluster` predates `aws-landing-zone` and builds a cluster without the network and ingress around it.
-It is kept because a destination that already has a VPC is a real shape, and because the sample needs an
-Environment blueprint that is not the whole estate.
 
 ## Running against Floci
 

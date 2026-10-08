@@ -42,23 +42,19 @@ provider "aws" {
     s3             = var.floci_endpoint
     rds            = var.floci_endpoint
     elasticache    = var.floci_endpoint
-    lambda         = var.floci_endpoint
     iam            = var.floci_endpoint
     sts            = var.floci_endpoint
     secretsmanager = var.floci_endpoint
-    cloudfront     = var.floci_endpoint
-    es             = var.floci_endpoint
-    kafka          = var.floci_endpoint
   }
 }
 
-# One resource of each shape, as the smoke test the provisioning workflow will later drive.
+# One resource of each shape the sample provisions, as a smoke test.
 
 module "orders_db" {
   source = "../../postgres-cluster"
 
   name        = "ordering/orders-db"
-  environment = "northwind/dev"
+  environment = "northwind/sandbox"
   stamp       = "default"
   size_class  = "small"
 }
@@ -66,19 +62,10 @@ module "orders_db" {
 module "session_cache" {
   source = "../../redis-cache"
 
-  name        = "checkout/session-cache"
-  environment = "northwind/dev"
+  name        = "checkout/checkout-session-cache"
+  environment = "northwind/sandbox"
   stamp       = "default"
   size_class  = "small"
-}
-
-module "lakehouse_bucket" {
-  source = "../../object-store-bucket"
-
-  name        = "data/lakehouse-bucket"
-  environment = "northwind/dev"
-  stamp       = "default"
-  size_class  = "large"
 }
 
 output "orders_db_secret_ref" {

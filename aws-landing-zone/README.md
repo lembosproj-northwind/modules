@@ -33,9 +33,3 @@ do not resolve. A run therefore proves the recipe applies, the state is kept, an
 — not that traffic flows. The difference is confined to the emulator: no variable here mentions it, because
 the provider and the endpoints are the root module's business, which is what lets this run unchanged
 against a real account.
-
-## Compared with `eks-cluster`
-
-`eks-cluster` is the smaller case: a cluster in two subnets, without egress, ingress, or workload identity.
-It stays because an environment that only needs somewhere to run should not have to build a hosted zone.
-This module is what an environment uses when it needs the whole substrate.
