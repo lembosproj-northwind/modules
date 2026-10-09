@@ -49,6 +49,11 @@ output "node_security_group_id" {
 
 # ── Cluster ──
 
+output "region" {
+  description = "Where the cluster is, which every slot's Kubernetes target is reached in."
+  value       = var.region
+}
+
 output "cluster_name" {
   description = "What `aws eks get-token` is called with, which is how a deployment authenticates."
   value       = aws_eks_cluster.this.name
@@ -106,7 +111,7 @@ output "hosted_zone_id" {
 output "ingress_domain" {
   description = <<-EOT
     The zone this environment publishes under. A component's ingress host is built from it, which is what
-    lets one template — `{component}.{environment.outputs.ingress_domain}` — hold in every stamp.
+    lets one template — `{component}.{environment.outputs.ingress_domain}` — hold in every environment.
   EOT
   value       = local.domain
 }

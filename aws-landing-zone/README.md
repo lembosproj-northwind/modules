@@ -1,12 +1,11 @@
 # aws-landing-zone
 
-The substrate an environment stamp sits on: a network, the identity to act in it, a cluster, and a way in
-from outside. An **Environment** blueprint, named by an `EnvironmentVersion` as its foundation.
+The substrate an environment sits on: a network, the identity to act in it, a cluster, and a way in from
+outside. An **Environment** blueprint, named by an `EnvironmentVersion` as its foundation.
 
-Shared by every stamp resolving to the same placement. Two stamps differing only in `country` share one of
-these; two differing in `region` do not, because a VPC and an EKS cluster are both regional. The platform
-decides that by the inputs a stamp feeds this module, and Terraform state is what makes the sharing real —
-the second stamp's run finds existing state and plans no changes.
+Built once per environment and shared by every slot in it — each slot is a namespace on this cluster, built by
+the blueprint's slot level. Nothing here is named after a slot, so the cluster, the VPC and the kubeconfig secret
+are named after the environment alone (`northwind/prod` builds `northwind-prod`).
 
 ## What it builds
 
@@ -20,8 +19,9 @@ the second stamp's run finds existing state and plans no changes.
 
 ## Why it takes a region rather than reading one
 
-An account spans regions; which one a slot occupies is a property of the slot. The region arrives from the
-stamp's `region` dimension, which is also what decides whether two stamps share a landing zone.
+An account spans regions, so the region is the environment version's answer. It is one region per environment:
+a VPC and an EKS cluster are both regional and every slot shares them, so an estate in two regions is two
+environments. It is published as the `region` output, which is where each slot's Kubernetes target reads it.
 
 ## Against the emulator
 

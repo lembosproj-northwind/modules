@@ -1,12 +1,12 @@
-# Everything an environment stamp needs to exist before anything can be deployed into it: a network, the
-# identity to act in it, a cluster, and a way in from outside.
+# Everything an environment needs to exist before anything can be deployed into it: a network, the identity to
+# act in it, a cluster, and a way in from outside.
 #
-# Shared by every stamp resolving to the same placement. Two stamps differing only in country share one of
-# these; two differing in region do not, because a VPC and a cluster are both regional.
+# Built once per environment and shared by every slot in it: a slot is a namespace on this cluster, not a
+# landing zone of its own. So nothing here is named after a slot — the environment's name is the whole identity.
 
 locals {
   slug    = replace(var.name, "/", "-")
-  cluster = substr("${local.slug}-${var.stamp}", 0, 38)
+  cluster = substr(local.slug, 0, 38)
 
   # Sized by stage, not by a size class. What a cluster needs is a property of what it hosts, and a stage
   # already says that — a developer never chooses "large" for an environment they do not own.
@@ -28,8 +28,8 @@ locals {
 
   zones = [for index in range(var.availability_zones) : "${var.region}${substr("abcd", index, 1)}"]
 
-  secret_ref = "${var.name}/${var.stamp}/kubeconfig"
-  domain     = var.ingress_domain != "" ? var.ingress_domain : "${var.stamp}.${local.slug}.internal"
+  secret_ref = "${var.name}/kubeconfig"
+  domain     = var.ingress_domain != "" ? var.ingress_domain : "${local.slug}.internal"
 
   # The two workloads that need to act on this account from inside the cluster, by the service account each
   # is bound to. Named here rather than inline so the roles and the policy documents cannot drift apart.
@@ -40,7 +40,6 @@ locals {
 
   tags = merge(var.tags, {
     "lembos.dev/environment" = var.name
-    "lembos.dev/stamp"       = var.stamp
     "lembos.dev/stage"       = var.stage
   })
 }

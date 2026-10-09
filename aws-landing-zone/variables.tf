@@ -1,18 +1,12 @@
-# The landing zone an environment declares once and every stamp resolving to the same placement shares.
+# The landing zone an environment declares once and every slot in it shares.
 #
-# An Environment blueprint, so it takes an environment and a stamp rather than a ResourceNeed. Unlike
+# An Environment blueprint's own level, so it takes the environment and nothing about any one slot. Unlike
 # eks-cluster it builds the whole substrate — network, identity, cluster and ingress — which is what an
 # environment needs before anything can be deployed into it.
 
 variable "name" {
   description = "The Environment's qualified name, e.g. northwind/prod."
   type        = string
-}
-
-variable "stamp" {
-  description = "The stamp this landing zone serves. Stamps sharing a placement share one of these."
-  type        = string
-  default     = "default"
 }
 
 variable "stage" {
@@ -34,9 +28,9 @@ variable "stage" {
 
 variable "region" {
   description = <<-EOT
-    Where it is built. Supplied by the stamp rather than by the account: an account spans regions, and
-    which one a slot occupies is a property of the slot. Two stamps whose region differs resolve different
-    foundation inputs and get a landing zone each — a VPC and a cluster are both regional.
+    Where it is built. The environment's answer rather than the account's: an account spans regions. One
+    region per environment, because a VPC and a cluster are both regional and every slot shares them — an
+    estate in two regions is two environments.
   EOT
   type        = string
   default     = "eu-west-1"
@@ -56,7 +50,7 @@ variable "cidr_block" {
 variable "availability_zones" {
   description = <<-EOT
     How many zones to spread across. Two is the floor, because an EKS control plane will not come up in
-    one and a stamp that cannot survive a zone is not a production stamp.
+    one and an environment that cannot survive a zone is not a production environment.
   EOT
   type        = number
   default     = 2
