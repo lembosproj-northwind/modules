@@ -3,6 +3,12 @@
 locals {
   slug = replace(var.name, "/", "-")
 
+  # One per placement. The same resource stands in every slot it is placed in, and an instance identifier is unique
+  # per account and region — two slots of one environment share both. Cut to leave room under the 63 characters RDS
+  # allows for a replica's "-replica-N", with a hash of the whole so two long names still differ.
+  placement  = lower(join("-", [replace(var.environment, "/", "-"), var.stamp, local.slug]))
+  identifier = length(local.placement) <= 50 ? local.placement : "${trimsuffix(substr(local.placement, 0, 41), "-")}-${substr(md5(local.placement), 0, 8)}"
+
   # What a size class means for Postgres. The platform team owns this table; the developer who
   # declared `postgres` at `small` does not have to know what an instance class is.
   sizing = {
@@ -16,7 +22,7 @@ locals {
   # size decision, which is why it is not in the table above.
   backup_retention = can(regex("prod", var.environment)) ? 30 : 7
 
-  secret_ref = "${var.environment}/${var.name}"
+  secret_ref = "${var.environment}/${var.stamp}/${var.name}"
 
   tags = merge(var.tags, {
     "lembos.dev/resource"    = var.name
@@ -31,7 +37,7 @@ resource "random_password" "master" {
 }
 
 resource "aws_db_instance" "this" {
-  identifier     = local.slug
+  identifier     = local.identifier
   engine         = "postgres"
   engine_version = var.engine_version
   instance_class = local.size.instance_class
@@ -55,7 +61,7 @@ resource "aws_db_instance" "this" {
 resource "aws_db_instance" "replica" {
   count = local.size.replicas
 
-  identifier          = "${local.slug}-replica-${count.index}"
+  identifier          = "${local.identifier}-replica-${count.index}"
   replicate_source_db = aws_db_instance.this.identifier
   instance_class      = local.size.instance_class
   skip_final_snapshot = true

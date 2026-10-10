@@ -74,5 +74,5 @@ follows the ordinary rule.
 ## Running against Floci
 
 Modules declare required providers but **do not configure them** — the root module does, which is what
-lets the same module run against Floci locally and a real account elsewhere. See
-[`examples/floci`](./examples/floci) for a root configuration with the endpoint overrides.
+lets the same module run against Floci locally and a real account elsewhere. Lembos writes that root module for
+every run, with the endpoints of the target it runs in, so Floci is reached the same way a real account is.

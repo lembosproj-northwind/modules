@@ -3,6 +3,12 @@
 locals {
   slug = replace(var.name, "/", "-")
 
+  # One per placement. The same resource stands in every slot it is placed in, and a replication group's id is
+  # unique per account and region — two slots of one environment share both, and so did every environment on Floci.
+  # Cut to the 40 characters ElastiCache allows, with a hash of the whole so two long names still differ.
+  placement = lower(join("-", [replace(var.environment, "/", "-"), var.stamp, local.slug]))
+  group_id  = length(local.placement) <= 40 ? local.placement : "${trimsuffix(substr(local.placement, 0, 31), "-")}-${substr(md5(local.placement), 0, 8)}"
+
   sizing = {
     small  = { node_type = "cache.t4g.micro", replicas = 0, failover = false }
     medium = { node_type = "cache.t4g.medium", replicas = 1, failover = true }
@@ -10,7 +16,7 @@ locals {
   }
   size = local.sizing[var.size_class]
 
-  secret_ref = "${var.environment}/${var.name}"
+  secret_ref = "${var.environment}/${var.stamp}/${var.name}"
 
   tags = merge(var.tags, {
     "lembos.dev/resource"    = var.name
@@ -20,8 +26,8 @@ locals {
 }
 
 resource "aws_elasticache_replication_group" "this" {
-  replication_group_id = substr(local.slug, 0, 40)
-  description          = "Lembos ${var.name} (${var.environment})"
+  replication_group_id = local.group_id
+  description          = "Lembos ${var.name} (${var.environment}, ${var.stamp})"
 
   engine         = "redis"
   engine_version = var.engine_version
