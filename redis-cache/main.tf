@@ -40,6 +40,16 @@ resource "aws_elasticache_replication_group" "this" {
   tags = local.tags
 }
 
+# Where clients connect. AWS gives a replication group with cluster mode off a primary endpoint and no configuration
+# endpoint; an emulator such as Floci answers with the configuration endpoint alone. Either is the address writes go
+# to, so the first one present is used — and none at all fails the apply rather than writing "rediss://:6379".
+locals {
+  endpoint = coalesce(
+    aws_elasticache_replication_group.this.primary_endpoint_address,
+    aws_elasticache_replication_group.this.configuration_endpoint_address,
+  )
+}
+
 resource "aws_secretsmanager_secret" "connection" {
   name = local.secret_ref
   tags = local.tags
@@ -48,6 +58,6 @@ resource "aws_secretsmanager_secret" "connection" {
 resource "aws_secretsmanager_secret_version" "connection" {
   secret_id = aws_secretsmanager_secret.connection.id
   secret_string = jsonencode({
-    url = "rediss://${aws_elasticache_replication_group.this.primary_endpoint_address}:6379"
+    url = "rediss://${local.endpoint}:${aws_elasticache_replication_group.this.port}"
   })
 }

@@ -4,7 +4,7 @@ output "resource_id" {
 
 output "endpoint" {
   description = "The primary. Writes go here."
-  value       = aws_elasticache_replication_group.this.primary_endpoint_address
+  value       = local.endpoint
 }
 
 output "port" {
